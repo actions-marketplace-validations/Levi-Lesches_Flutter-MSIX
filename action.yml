@@ -1,0 +1,85 @@
+# Builds a Windows App Installer (.msix) for your Windows Flutter app, using https://pub.dev/packages/msix.
+# 
+# To use this action, add your Windows Certificate file, in base64 format, to a repository secret and pass
+# that to this workflow. This action then: 
+# - Clones your repository and installs Flutter
+# - Decodes your base64 certificate into a binary .pfx file
+# - Runs flutter pub run msix:create to build and sign your Flutter app
+# - Creates a new release and uploads the generated .msix file to it
+
+name: "Flutter MSIX"
+author: "Levi Lesches"
+description: "A GitHub Action to build your Windows Flutter app into a (signed) MSIX file"
+inputs: 
+  # Installing Flutter
+  should-cache-flutter:
+    description: "Whether this action should use a cached version of Flutter. Defaults to true"
+    required: false
+    default: true
+  flutter-cache-key: 
+    description: "The cache key to use for Flutter. Defaults to flutter-windows, which doesn't update all that often"
+    required: false
+    default: "flutter-windows"
+  # Generating the MSIX
+  base64-certificate: 
+    description: "Your base64-encoded certificate. For security, pass this as a repository secret."
+    required: true
+  certificate-path: 
+    description: "The path to your Windows certificate (.pfx) file, as it appears in your pubspec.yaml"
+    required: true
+  msix-path:
+    description: "The path where the MSIX file will be generated. This is a combination of the output_path and output_name properties in package:msix"
+  # Generating the release
+  release-name: 
+    description: "The name of the generated release. Defaults to the tag name, if any. This is passed directly to softprops/action-gh-release"
+    required: false
+  release-body: 
+    description: "Text to use as the body of the release. This is passed directly to softprops/action-gh-release"
+    required: false
+  release-body-path: 
+    description: "A file to use as the body of the release. This is passed directly to softprops/action-gh-release"
+    required: false
+  release-is-draft: 
+    description: "Whether this release should be a draft. This is passed directly to softprops/action-gh-release"
+    required: false
+  generate-release-notes: 
+    description: "Whether to automatically generate release notes. This is passed directly to softprops/action-gh-release"
+    required: false
+    default: true
+
+runs: 
+  using: "composite"
+  steps: 
+    - name: Clone repository
+      uses: actions/checkout@v3
+
+    - name: Install Flutter
+      uses: subosito/flutter-action@v2
+      with: 
+        cache: ${{ inputs.should-cache-flutter }}
+        cache-key: ${{ inputs.flutter-cache-key }}
+
+    - name: Load certificate
+      run: |
+        echo "${{ inputs.base64-certificate }}" > base64-certificate.txt
+        openssl enc -base64 -d -in base64-certificate.txt -out ${{ inputs.certificate-path }}
+
+    - name: Build MSIX file
+      run: |
+        flutter pub get
+        flutter pub run msix:create
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v0.1.15
+      with: 
+        files: ${{ inputs.msix-path }}
+        name: ${{ input.release-name }}
+        generate_release_notes: ${{ input.generate-release-notes }}
+        draft: ${{ inputs.release-is-draft}}
+        fail_on_unmatched_files: true
+        body: ${{ inputs.release-body }}
+        body_path: ${{ inputs.release-body-path }}
+
+branding: 
+  icon: file-plus
+  color: blue
