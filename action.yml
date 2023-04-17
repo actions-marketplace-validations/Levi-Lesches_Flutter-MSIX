@@ -14,11 +14,9 @@ inputs:
   # Installing Flutter
   should-cache-flutter:
     description: "Whether this action should use a cached version of Flutter. Defaults to true"
-    required: false
     default: true
   flutter-cache-key: 
     description: "The cache key to use for Flutter. Defaults to flutter-windows, which doesn't update all that often"
-    required: false
     default: "flutter-windows"
   # Generating the MSIX
   base64-certificate: 
@@ -29,22 +27,18 @@ inputs:
     required: true
   msix-path:
     description: "The path where the MSIX file will be generated. This is a combination of the output_path and output_name properties in package:msix"
+    required: true
   # Generating the release
   release-name: 
     description: "The name of the generated release. Defaults to the tag name, if any. This is passed directly to softprops/action-gh-release"
-    required: false
   release-body: 
     description: "Text to use as the body of the release. This is passed directly to softprops/action-gh-release"
-    required: false
   release-body-path: 
     description: "A file to use as the body of the release. This is passed directly to softprops/action-gh-release"
-    required: false
   release-is-draft: 
     description: "Whether this release should be a draft. This is passed directly to softprops/action-gh-release"
-    required: false
   generate-release-notes: 
     description: "Whether to automatically generate release notes. This is passed directly to softprops/action-gh-release"
-    required: false
     default: true
 
 runs: 
@@ -60,11 +54,13 @@ runs:
         cache-key: ${{ inputs.flutter-cache-key }}
 
     - name: Load certificate
+      shell: powershell
       run: |
         echo "${{ inputs.base64-certificate }}" > base64-certificate.txt
         openssl enc -base64 -d -in base64-certificate.txt -out ${{ inputs.certificate-path }}
 
     - name: Build MSIX file
+      shell: powershell
       run: |
         flutter pub get
         flutter pub run msix:create
@@ -73,8 +69,8 @@ runs:
       uses: softprops/action-gh-release@v0.1.15
       with: 
         files: ${{ inputs.msix-path }}
-        name: ${{ input.release-name }}
-        generate_release_notes: ${{ input.generate-release-notes }}
+        name: ${{ inputs.release-name }}
+        generate_release_notes: ${{ inputs.generate-release-notes }}
         draft: ${{ inputs.release-is-draft}}
         fail_on_unmatched_files: true
         body: ${{ inputs.release-body }}
