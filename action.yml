@@ -55,8 +55,10 @@ runs:
 
     - name: Load certificate
       shell: powershell
+      env: 
+        base64_certificate: ${{ inputs.base64-certificate }}
       run: |
-        echo "${{ inputs.base64-certificate }}" > base64-certificate.txt
+        echo $base64_certificate > base64-certificate.txt
         openssl enc -base64 -d -in base64-certificate.txt -out ${{ inputs.certificate-path }}
 
     - name: Build MSIX file
